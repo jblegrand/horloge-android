@@ -2,66 +2,124 @@ package fr.ferme.horloge;
 
 import android.app.Activity;
 import android.graphics.Color;
+import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.Gravity;
 import android.view.View;
 import android.view.WindowManager;
+import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
-import android.widget.TextClock;
-import java.util.Random;
+import android.widget.TextView;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
 
 public class MainActivity extends Activity {
 
-    private LinearLayout clockContainer;
-    private final Handler burnInHandler = new Handler(Looper.getMainLooper());
-    private final Random random = new Random();
+    private TextView hoursText;
+    private TextView minutesText;
+    private final Handler handler = new Handler(Looper.getMainLooper());
+    private final SimpleDateFormat hourFormat = new SimpleDateFormat("HH", Locale.getDefault());
+    private final SimpleDateFormat minuteFormat = new SimpleDateFormat("mm", Locale.getDefault());
+
+    private final Runnable timeUpdater = new Runnable() {
+        @Override
+        public void run() {
+            Date now = new Date();
+            if (hoursText != null && minutesText != null) {
+                hoursText.setText(hourFormat.format(now));
+                minutesText.setText(minuteFormat.format(now));
+            }
+            // Mise à jour chaque seconde
+            handler.postDelayed(this, 1000);
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // Maintient l'écran allumé
+        // Écran toujours allumé
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
-        // Conteneur principal plein écran noir
+        // Fond global noir profond
         RelativeLayout root = new RelativeLayout(this);
-        root.setBackgroundColor(Color.BLACK);
+        root.setBackgroundColor(Color.parseColor("#0A0A0A"));
 
-        // Conteneur centré pour l'horloge
-        clockContainer = new LinearLayout(this);
-        clockContainer.setOrientation(LinearLayout.VERTICAL);
-        clockContainer.setGravity(Gravity.CENTER);
+        // Conteneur horizontal centré pour les deux tuiles
+        LinearLayout tilesRow = new LinearLayout(this);
+        tilesRow.setOrientation(LinearLayout.HORIZONTAL);
+        tilesRow.setGravity(Gravity.CENTER);
 
-        RelativeLayout.LayoutParams containerParams = new RelativeLayout.LayoutParams(
+        RelativeLayout.LayoutParams rowParams = new RelativeLayout.LayoutParams(
             RelativeLayout.LayoutParams.WRAP_CONTENT,
             RelativeLayout.LayoutParams.WRAP_CONTENT
         );
-        containerParams.addRule(RelativeLayout.CENTER_IN_PARENT);
+        rowParams.addRule(RelativeLayout.CENTER_IN_PARENT);
 
-        // Affichage de l'heure
-        TextClock timeClock = new TextClock(this);
-        timeClock.setFormat12Hour("HH:mm");
-        timeClock.setFormat24Hour("HH:mm");
-        timeClock.setTextColor(Color.WHITE);
-        timeClock.setTextSize(90);
+        // Construction des deux tuiles (Heures et Minutes)
+        hoursText = new TextView(this);
+        minutesText = new TextView(this);
 
-        // Affichage de la date
-        TextClock dateClock = new TextClock(this);
-        dateClock.setFormat12Hour("EEEE d MMMM yyyy");
-        dateClock.setFormat24Hour("EEEE d MMMM yyyy");
-        dateClock.setTextColor(Color.GRAY);
-        dateClock.setTextSize(22);
+        FrameLayout hoursTile = createFlipTile(hoursText);
+        FrameLayout minutesTile = createFlipTile(minutesText);
 
-        clockContainer.addView(timeClock);
-        clockContainer.addView(dateClock);
-        root.addView(clockContainer, containerParams);
+        // Espacement entre les tuiles
+        LinearLayout.LayoutParams marginParams = new LinearLayout.LayoutParams(
+            dpToPx(160), dpToPx(190)
+        );
+        marginParams.setMargins(dpToPx(10), 0, dpToPx(10), 0);
 
+        tilesRow.addView(hoursTile, marginParams);
+        tilesRow.addView(minutesTile, marginParams);
+
+        root.addView(tilesRow, rowParams);
         setContentView(root);
+
         hideSystemUI();
-        startBurnInProtection();
+        handler.post(timeUpdater);
+    }
+
+    private FrameLayout createFlipTile(TextView textView) {
+        FrameLayout tile = new FrameLayout(this);
+
+        // Fond gris foncé avec angles arrondis
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(Color.parseColor("#1C1E22"));
+        bg.setCornerRadius(dpToPx(14));
+        tile.setBackground(bg);
+
+        // Chiffres blancs, police épaisse
+        textView.setTextColor(Color.parseColor("#EDEDED"));
+        textView.setTextSize(105);
+        textView.setTypeface(Typeface.create("sans-serif", Typeface.BOLD));
+        textView.setGravity(Gravity.CENTER);
+
+        FrameLayout.LayoutParams textParams = new FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT,
+            FrameLayout.LayoutParams.MATCH_PARENT
+        );
+        tile.addView(textView, textParams);
+
+        // Fente horizontale centrale (effet clapet)
+        View splitLine = new View(this);
+        splitLine.setBackgroundColor(Color.parseColor("#0A0A0A"));
+        FrameLayout.LayoutParams lineParams = new FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT,
+            dpToPx(3)
+        );
+        lineParams.gravity = Gravity.CENTER;
+        tile.addView(splitLine, lineParams);
+
+        return tile;
+    }
+
+    private int dpToPx(int dp) {
+        return (int) (dp * getResources().getDisplayMetrics().density);
     }
 
     private void hideSystemUI() {
@@ -76,25 +134,15 @@ public class MainActivity extends Activity {
         );
     }
 
-    // Déplace le bloc de quelques pixels toutes les minutes pour ménager l'écran
-    private void startBurnInProtection() {
-        burnInHandler.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                if (clockContainer != null) {
-                    float offsetX = (random.nextFloat() - 0.5f) * 40;
-                    float offsetY = (random.nextFloat() - 0.5f) * 40;
-                    clockContainer.setTranslationX(offsetX);
-                    clockContainer.setTranslationY(offsetY);
-                }
-                burnInHandler.postDelayed(this, 60000);
-            }
-        }, 60000);
-    }
-
     @Override
     protected void onResume() {
         super.onResume();
         hideSystemUI();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        handler.removeCallbacks(timeUpdater);
     }
 }
