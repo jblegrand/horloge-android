@@ -65,7 +65,6 @@ public class MainActivity extends Activity {
     private final SimpleDateFormat hourFormat = new SimpleDateFormat("HH", Locale.getDefault());
     private final SimpleDateFormat minuteFormat = new SimpleDateFormat("mm", Locale.getDefault());
 
-    // Récepteur passif batterie
     private final BroadcastReceiver batteryReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -82,7 +81,6 @@ public class MainActivity extends Activity {
         }
     };
 
-    // Rafraîchissement aligné à la minute
     private final Runnable minuteUpdater = new Runnable() {
         @Override
         public void run() {
@@ -100,7 +98,6 @@ public class MainActivity extends Activity {
         }
     };
 
-    // Tâche réseau périodique (toutes les 15 minutes)
     private final Runnable dataRefreshRunnable = new Runnable() {
         @Override
         public void run() {
@@ -127,7 +124,7 @@ public class MainActivity extends Activity {
         );
         rootLayout.addView(mainContainer, mainParams);
 
-        // Section Horloge
+        // Horloge
         clockSection = new FrameLayout(this);
         clockRow = new LinearLayout(this);
         clockRow.setOrientation(LinearLayout.HORIZONTAL);
@@ -149,10 +146,9 @@ public class MainActivity extends Activity {
 
         // Section Widgets (Météo + BTC)
         sideSection = new LinearLayout(this);
-        sideSection.setOrientation(LinearLayout.VERTICAL);
         sideSection.setGravity(Gravity.CENTER);
 
-        // Carte Météo Ploëzal
+        // Météo
         weatherCard = createWidgetCard();
         LinearLayout weatherBox = new LinearLayout(this);
         weatherBox.setOrientation(LinearLayout.VERTICAL);
@@ -160,22 +156,21 @@ public class MainActivity extends Activity {
 
         weatherTempText = new TextView(this);
         weatherTempText.setTextColor(Color.WHITE);
-        weatherTempText.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+        weatherTempText.setTypeface(Typeface.create("sans-serif", Typeface.BOLD));
         weatherTempText.setText("--°C");
         weatherTempText.setGravity(Gravity.CENTER);
+        weatherTempText.setSingleLine(true);
 
         weatherDescText = new TextView(this);
         weatherDescText.setTextColor(Color.parseColor("#9E9E9E"));
-        weatherDescText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         weatherDescText.setText("Ploëzal");
         weatherDescText.setGravity(Gravity.CENTER);
 
         weatherHourlyText = new TextView(this);
         weatherHourlyText.setTextColor(Color.parseColor("#B0B0B0"));
-        weatherHourlyText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
         weatherHourlyText.setText("--h: --° | --h: --° | --h: --°");
         weatherHourlyText.setGravity(Gravity.CENTER);
-        weatherHourlyText.setPadding(0, dpToPx(6), 0, 0);
+        weatherHourlyText.setSingleLine(true);
 
         weatherBox.addView(weatherTempText);
         weatherBox.addView(weatherDescText);
@@ -184,7 +179,7 @@ public class MainActivity extends Activity {
             FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.CENTER
         ));
 
-        // Carte Bitcoin
+        // BTC
         btcCard = createWidgetCard();
         LinearLayout btcBox = new LinearLayout(this);
         btcBox.setOrientation(LinearLayout.VERTICAL);
@@ -192,15 +187,17 @@ public class MainActivity extends Activity {
 
         btcPriceText = new TextView(this);
         btcPriceText.setTextColor(Color.WHITE);
-        btcPriceText.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
-        btcPriceText.setText("BTC: -- $");
+        btcPriceText.setTypeface(Typeface.create("sans-serif", Typeface.BOLD));
+        btcPriceText.setText("$ --");
         btcPriceText.setGravity(Gravity.CENTER);
+        btcPriceText.setSingleLine(true);
 
         btcChangeText = new TextView(this);
         btcChangeText.setTextColor(Color.parseColor("#9E9E9E"));
-        btcChangeText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+        btcChangeText.setTypeface(Typeface.create("sans-serif", Typeface.BOLD));
         btcChangeText.setText("24h: -- %");
         btcChangeText.setGravity(Gravity.CENTER);
+        btcChangeText.setSingleLine(true);
 
         btcBox.addView(btcPriceText);
         btcBox.addView(btcChangeText);
@@ -214,10 +211,10 @@ public class MainActivity extends Activity {
         mainContainer.addView(clockSection);
         mainContainer.addView(sideSection);
 
-        // Indicateur batterie discret
+        // Batterie
         batteryText = new TextView(this);
-        batteryText.setTextColor(Color.parseColor("#777777"));
-        batteryText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        batteryText.setTextColor(Color.parseColor("#888888"));
+        batteryText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
         batteryText.setTypeface(Typeface.create("sans-serif", Typeface.BOLD));
 
         RelativeLayout.LayoutParams battParams = new RelativeLayout.LayoutParams(
@@ -226,7 +223,7 @@ public class MainActivity extends Activity {
         );
         battParams.addRule(RelativeLayout.ALIGN_PARENT_TOP);
         battParams.addRule(RelativeLayout.ALIGN_PARENT_END);
-        int margin = dpToPx(16);
+        int margin = dpToPx(14);
         battParams.setMargins(0, margin, margin, 0);
         rootLayout.addView(batteryText, battParams);
 
@@ -247,50 +244,62 @@ public class MainActivity extends Activity {
         if (w == 0 || h == 0) return;
 
         boolean isLandscape = w > h;
-        int spacing = dpToPx(14);
+        int spacing = dpToPx(12);
 
         if (isLandscape) {
             mainContainer.setOrientation(LinearLayout.HORIZONTAL);
-            int clockW = (w * 2) / 3;
+            sideSection.setOrientation(LinearLayout.VERTICAL);
+
+            // 62 % Horloge, 38 % Widgets pour garantir la place du BTC et météo
+            int clockW = (int) (w * 0.62);
             int sideW = w - clockW;
 
             clockSection.setLayoutParams(new LinearLayout.LayoutParams(clockW, h));
             sideSection.setLayoutParams(new LinearLayout.LayoutParams(sideW, h));
 
             int tileW = (clockW - spacing * 3) / 2;
-            int tileH = (int) (h * 0.72);
-
+            int tileH = Math.min((int) (h * 0.85), (int) (tileW * 1.15));
             updateTileDimensions(tileW, tileH, spacing);
 
             int cardW = sideW - spacing * 2;
             int cardH = (h - spacing * 3) / 2;
+            setCardParams(weatherCard, cardW, cardH, spacing);
+            setCardParams(btcCard, cardW, cardH, 0);
 
-            setCardParams(weatherCard, cardW, cardH, 0, spacing);
-            setCardParams(btcCard, cardW, cardH, 0, 0);
+            // Tailles de polices ajustées
+            weatherTempText.setTextSize(TypedValue.COMPLEX_UNIT_SP, Math.min(34, cardH * 0.26f));
+            weatherDescText.setTextSize(TypedValue.COMPLEX_UNIT_SP, Math.min(13, cardH * 0.11f));
+            weatherHourlyText.setTextSize(TypedValue.COMPLEX_UNIT_SP, Math.min(11, cardH * 0.09f));
 
-            weatherTempText.setTextSize(TypedValue.COMPLEX_UNIT_SP, Math.max(22, cardH * 0.17f));
-            btcPriceText.setTextSize(TypedValue.COMPLEX_UNIT_SP, Math.max(22, cardH * 0.17f));
+            btcPriceText.setTextSize(TypedValue.COMPLEX_UNIT_SP, Math.min(32, cardH * 0.25f));
+            btcChangeText.setTextSize(TypedValue.COMPLEX_UNIT_SP, Math.min(15, cardH * 0.12f));
 
         } else {
             mainContainer.setOrientation(LinearLayout.VERTICAL);
-            int halfH = h / 2;
+            sideSection.setOrientation(LinearLayout.VERTICAL);
 
-            clockSection.setLayoutParams(new LinearLayout.LayoutParams(w, halfH));
-            sideSection.setLayoutParams(new LinearLayout.LayoutParams(w, halfH));
+            int clockH = (int) (h * 0.48);
+            int sideH = h - clockH;
 
+            clockSection.setLayoutParams(new LinearLayout.LayoutParams(w, clockH));
+            sideSection.setLayoutParams(new LinearLayout.LayoutParams(w, sideH));
+
+            // En portrait : calcul basé sur la largeur pour éviter le rognage des chiffres
             int tileW = (w - spacing * 3) / 2;
-            int tileH = (int) (halfH * 0.75);
-
+            int tileH = Math.min((int) (clockH * 0.88), (int) (tileW * 1.15));
             updateTileDimensions(tileW, tileH, spacing);
 
             int cardW = w - spacing * 2;
-            int cardH = (halfH - spacing * 3) / 2;
+            int cardH = (sideH - spacing * 3) / 2;
+            setCardParams(weatherCard, cardW, cardH, spacing);
+            setCardParams(btcCard, cardW, cardH, 0);
 
-            setCardParams(weatherCard, cardW, cardH, 0, spacing);
-            setCardParams(btcCard, cardW, cardH, 0, 0);
+            weatherTempText.setTextSize(TypedValue.COMPLEX_UNIT_SP, Math.min(38, cardH * 0.28f));
+            weatherDescText.setTextSize(TypedValue.COMPLEX_UNIT_SP, Math.min(14, cardH * 0.11f));
+            weatherHourlyText.setTextSize(TypedValue.COMPLEX_UNIT_SP, Math.min(12, cardH * 0.09f));
 
-            weatherTempText.setTextSize(TypedValue.COMPLEX_UNIT_SP, Math.max(22, cardH * 0.17f));
-            btcPriceText.setTextSize(TypedValue.COMPLEX_UNIT_SP, Math.max(22, cardH * 0.17f));
+            btcPriceText.setTextSize(TypedValue.COMPLEX_UNIT_SP, Math.min(42, cardH * 0.30f));
+            btcChangeText.setTextSize(TypedValue.COMPLEX_UNIT_SP, Math.min(16, cardH * 0.13f));
         }
     }
 
@@ -303,12 +312,14 @@ public class MainActivity extends Activity {
         p2.setMargins(spacing / 2, 0, 0, 0);
         minutesTile.setLayoutParams(p2);
 
-        float textSp = (tileH * 0.58f) / getResources().getDisplayMetrics().scaledDensity;
-        hoursText.setTextSize(TypedValue.COMPLEX_UNIT_SP, textSp);
-        minutesText.setTextSize(TypedValue.COMPLEX_UNIT_SP, textSp);
+        // Calcul strict anti-rognage : basé sur la plus petite dimension
+        float density = getResources().getDisplayMetrics().scaledDensity;
+        float optimalSp = (Math.min(tileW * 0.72f, tileH * 0.60f)) / density;
+        hoursText.setTextSize(TypedValue.COMPLEX_UNIT_SP, optimalSp);
+        minutesText.setTextSize(TypedValue.COMPLEX_UNIT_SP, optimalSp);
     }
 
-    private void setCardParams(FrameLayout card, int width, int height, int marginH, int marginB) {
+    private void setCardParams(FrameLayout card, int width, int height, int marginB) {
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(width, height);
         params.gravity = Gravity.CENTER_HORIZONTAL;
         params.bottomMargin = marginB;
@@ -325,10 +336,12 @@ public class MainActivity extends Activity {
         tv.setTextColor(Color.parseColor("#EAEAEA"));
         tv.setTypeface(Typeface.create("sans-serif", Typeface.BOLD));
         tv.setGravity(Gravity.CENTER);
+        tv.setIncludeFontPadding(false);
 
         tile.addView(tv, new FrameLayout.LayoutParams(
             FrameLayout.LayoutParams.MATCH_PARENT,
-            FrameLayout.LayoutParams.MATCH_PARENT
+            FrameLayout.LayoutParams.MATCH_PARENT,
+            Gravity.CENTER
         ));
 
         View splitLine = new View(this);
@@ -366,7 +379,6 @@ public class MainActivity extends Activity {
         );
     }
 
-    // Récupération Météo Ploëzal (Open-Meteo) avec prévisions 3 heures
     private void fetchWeather() {
         try {
             URL url = new URL("https://api.open-meteo.com/v1/forecast?latitude=48.7107&longitude=-3.2014&current=temperature_2m,weather_code&hourly=temperature_2m,weather_code&timezone=auto");
@@ -382,13 +394,11 @@ public class MainActivity extends Activity {
 
             JSONObject json = new JSONObject(sb.toString());
 
-            // Météo instantanée
             JSONObject current = json.getJSONObject("current");
             double currentTemp = current.getDouble("temperature_2m");
             int currentCode = current.getInt("weather_code");
             String currentSymbol = getWeatherSymbol(currentCode);
 
-            // Prévisions heure par heure
             JSONObject hourly = json.getJSONObject("hourly");
             JSONArray timeArr = hourly.getJSONArray("time");
             JSONArray tempArr = hourly.getJSONArray("temperature_2m");
@@ -399,13 +409,13 @@ public class MainActivity extends Activity {
             int count = 0;
 
             for (int i = 0; i < timeArr.length() && count < 3; i++) {
-                String timeStr = timeArr.getString(i); // Format: "YYYY-MM-DDTHH:00"
+                String timeStr = timeArr.getString(i);
                 if (timeStr.length() >= 13) {
                     int h = Integer.parseInt(timeStr.substring(11, 13));
                     if (h > currentHour) {
                         double hTemp = tempArr.getDouble(i);
                         int hCode = codeArr.getInt(i);
-                        if (count > 0) hourlySb.append("  |  ");
+                        if (count > 0) hourlySb.append(" | ");
                         hourlySb.append(h).append("h ").append(getWeatherSymbol(hCode)).append(" ").append(Math.round(hTemp)).append("°");
                         count++;
                     }
@@ -437,7 +447,6 @@ public class MainActivity extends Activity {
         return "☁️";
     }
 
-    // Récupération cours Bitcoin (CoinGecko)
     private void fetchBtc() {
         try {
             URL url = new URL("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true");
